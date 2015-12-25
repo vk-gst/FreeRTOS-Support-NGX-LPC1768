@@ -39,6 +39,7 @@ It sits between a peripheral driver library and a user application to provide a 
 The current board support package implementation(s) support UART, I2C and SPI operation, in both polled and interrupt driven modes.
 
 FreeRTOS+IO API functions: 
+
 -- FreeRTOS_open() : Opens a peripheral for use with FreeRTOS+IO. 
 The board support package defines which peripherals are available on any particular platform.
 
