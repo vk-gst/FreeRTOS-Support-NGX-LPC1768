@@ -1,0 +1,73 @@
+#include "string.h"
+
+/* FreeRTOS includes. */
+#include "FreeRTOS.h"
+#include "task.h"
+#include "queue.h"
+#include "semphr.h"
+
+/* FreeRTOS+IO includes. */
+#include "FreeRTOS_IO.h"
+#include "LPCXpresso17xx-base-board.h"
+/* Place holder for calls to ioctl that don't use the value parameter. */
+#define cmdPARAMTER_NOT_USED			( ( void * ) 0 )
+#define cmd50ms					( ( void * ) ( 50UL / portTICK_RATE_MS ) )
+#define cmdMAX_INPUT_SIZE				20
+
+static void prvUARTTask(void *pvParameters);
+
+static xTaskHandle xUARTTask = NULL;
+static const int8_t * const string = ( int8_t * ) "My Uart is working.\r\nType Help to view a list of registered commands.\r\n\r\n>";
+static const int8_t * const pcNewLine = ( int8_t * ) "\r\n";
+
+
+void vUARTtaskstart( void *xqueue )
+{
+	xTaskCreate( 	prvUARTTask,				/* The task that implements the command console. */
+					( const int8_t * const ) "UART",/* Text name assigned to the task.  This is just to assist debugging.  The kernel does not use this name itself. */
+					configUART_COMMAND_CONSOLE_STACK_SIZE,	/* The size of the stack allocated to the task. */
+					xqueue,									/* The parameter is not used, so NULL is passed. */
+					configUART_COMMAND_CONSOLE_TASK_PRIORITY,/* The priority allocated to the task. */
+					&xUARTTask );					/* Used to store the handle to the created task. */
+}
+
+static void prvUARTTask(void *pvParameters)
+{
+	//char string[20]="My Uart is Working";
+
+
+	portBASE_TYPE xReturned;
+	Peripheral_Descriptor_t xUART;
+	const uint8_t *ulReceivedValue={0};
+	xQueueHandle rxqueue = (xQueueHandle)pvParameters;
+	uint32_t i;
+
+
+	xUART = FreeRTOS_open( boardMY_UART, ( uint32_t ) cmdPARAMTER_NOT_USED );
+	configASSERT( xUART );
+
+	xReturned = FreeRTOS_ioctl( xUART, ioctlUSE_ZERO_COPY_TX, cmdPARAMTER_NOT_USED );
+	configASSERT( xReturned );
+
+
+	xReturned = FreeRTOS_ioctl( xUART, ioctlSET_INTERRUPT_PRIORITY, ( void * ) ( configMIN_LIBRARY_INTERRUPT_PRIORITY - 1 ) );
+	configASSERT( xReturned );
+
+
+
+	for(;;)
+		{
+		xQueueReceive( rxqueue, &ulReceivedValue, portMAX_DELAY );
+
+
+	//if( FreeRTOS_ioctl( xUART, ioctlOBTAIN_WRITE_MUTEX, cmd50ms ) == pdPASS )
+		{
+			FreeRTOS_write( xUART, ulReceivedValue, strlen( ( char * ) ulReceivedValue ) );
+		}
+
+		//for( ;; );
+		}
+	(void) pvParameters;
+	(void) i;
+
+}
